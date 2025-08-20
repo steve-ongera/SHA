@@ -1,0 +1,455 @@
+{% extends 'admin/adminbase.html' %}
+
+{% block title %}Dashboard - SHA Admin{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item active">Dashboard</li>
+{% endblock %}
+
+{% block content %}
+    <!-- Welcome Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Welcome back, {{ user.first_name|default:user.username }}!</h1>
+            <p class="text-muted mb-0">Here's what's happening with SHA today.</p>
+        </div>
+        <div class="text-end">
+            <small class="text-muted">Last updated: <span id="lastUpdated">{{ "now"|date:"M d, Y H:i" }}</span></small>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-4 mb-4">
+        <!-- Members Statistics -->
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card primary">
+                <i class="bi bi-people stat-icon"></i>
+                <div class="stat-number" id="total-members">{{ total_members|floatformat:0 }}</div>
+                <div class="stat-label">Total Members</div>
+                <small class="text-success">
+                    <i class="bi bi-arrow-up"></i>
+                    {{ active_members }} active
+                </small>
+            </div>
+        </div>
+
+        <!-- Hospitals Statistics -->
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card success">
+                <i class="bi bi-hospital stat-icon"></i>
+                <div class="stat-number" id="total-hospitals">{{ total_hospitals|floatformat:0 }}</div>
+                <div class="stat-label">Total Hospitals</div>
+                <small class="text-success">
+                    <i class="bi bi-check-circle"></i>
+                    {{ active_hospitals }} active
+                </small>
+            </div>
+        </div>
+
+        <!-- Contributions Statistics -->
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card warning">
+                <i class="bi bi-cash-stack stat-icon"></i>
+                <div class="stat-number">KSh {{ total_contributions|floatformat:0 }}</div>
+                <div class="stat-label">Total Contributions</div>
+                <small class="text-primary">
+                    <i class="bi bi-calendar-month"></i>
+                    KSh {{ this_month_contributions|floatformat:0 }} this month
+                </small>
+            </div>
+        </div>
+
+        <!-- Claims Statistics -->
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card danger">
+                <i class="bi bi-file-text stat-icon"></i>
+                <div class="stat-number" id="pending-claims">{{ pending_claims|floatformat:0 }}</div>
+                <div class="stat-label">Pending Claims</div>
+                <small class="text-info">
+                    <i class="bi bi-check2-all"></i>
+                    {{ approved_claims }} approved
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="stat-card primary">
+                <i class="bi bi-person-plus stat-icon"></i>
+                <div class="stat-number" id="pending-members">{{ pending_members }}</div>
+                <div class="stat-label">Pending Members</div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="stat-card success">
+                <i class="bi bi-calendar-check stat-icon"></i>
+                <div class="stat-number" id="today-visits">{{ this_month_visits }}</div>
+                <div class="stat-label">This Month Visits</div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="stat-card warning">
+                <i class="bi bi-building stat-icon"></i>
+                <div class="stat-number">{{ total_employers }}</div>
+                <div class="stat-label">Total Employers</div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="stat-card danger">
+                <i class="bi bi-exclamation-triangle stat-icon"></i>
+                <div class="stat-number" id="low-stock-alerts">{{ low_stock_medicines }}</div>
+                <div class="stat-label">Low Stock Alerts</div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="stat-card primary">
+                <i class="bi bi-clipboard-check stat-icon"></i>
+                <div class="stat-number">{{ pending_approvals }}</div>
+                <div class="stat-label">Pending Approvals</div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="stat-card success">
+                <i class="bi bi-cash stat-icon"></i>
+                <div class="stat-number">KSh {{ total_claims_amount|floatformat:0 }}</div>
+                <div class="stat-label">Total Claims</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Charts Section -->
+        <div class="col-xl-8">
+            <!-- Monthly Contributions Chart -->
+            <div class="chart-container mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-bar-chart me-2"></i>Monthly Contributions
+                    </h5>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <input type="radio" class="btn-check" name="contributionsPeriod" id="contributions6m" checked>
+                        <label class="btn btn-outline-primary" for="contributions6m">6M</label>
+                        
+                        <input type="radio" class="btn-check" name="contributionsPeriod" id="contributions1y">
+                        <label class="btn btn-outline-primary" for="contributions1y">1Y</label>
+                    </div>
+                </div>
+                <canvas id="contributionsChart" height="300"></canvas>
+            </div>
+
+            <!-- Daily Visits Chart -->
+            <div class="chart-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-activity me-2"></i>Daily Hospital Visits (Last 30 Days)
+                    </h5>
+                    <span class="badge bg-primary">{{ total_visits }} total visits</span>
+                </div>
+                <canvas id="visitsChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-xl-4">
+            <!-- Recent Activities -->
+            <div class="data-table mb-4">
+                <div class="table-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history me-2"></i>Recent Member Registrations
+                    </h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <tbody>
+                            {% for member in recent_members %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                            {{ member.first_name|first }}{{ member.last_name|first }}
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold">{{ member.first_name }} {{ member.last_name }}</div>
+                                            <small class="text-muted">{{ member.sha_number }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-end">
+                                    <span class="status-badge {{ member.status }}">{{ member.get_status_display }}</span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="2" class="text-center text-muted py-4">
+                                    <i class="bi bi-inbox display-4 d-block mb-2 opacity-50"></i>
+                                    No recent registrations
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Top Hospitals -->
+            <div class="data-table mb-4">
+                <div class="table-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-trophy me-2"></i>Top Hospitals by Visits
+                    </h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <tbody>
+                            {% for hospital in top_hospitals %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">{{ hospital.name|truncatechars:25 }}</div>
+                                    <small class="text-muted">{{ hospital.county.name }}</small>
+                                </td>
+                                <td class="text-end">
+                                    <span class="badge bg-primary">{{ hospital.visit_count }} visits</span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="2" class="text-center text-muted py-4">
+                                    <i class="bi bi-hospital display-4 d-block mb-2 opacity-50"></i>
+                                    No hospital data
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- System Alerts -->
+            <div class="data-table">
+                <div class="table-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-bell me-2"></i>System Alerts
+                    </h5>
+                </div>
+                <div class="p-3">
+                    {% if pending_members > 0 %}
+                    <div class="alert alert-warning d-flex align-items-center mb-2" role="alert">
+                        <i class="bi bi-person-exclamation me-2"></i>
+                        <div>
+                            <strong>{{ pending_members }}</strong> member{{ pending_members|pluralize }} pending approval
+                            <div><a href="{% url 'members_list' %}?status=pending" class="alert-link">Review now</a></div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if pending_claims > 0 %}
+                    <div class="alert alert-info d-flex align-items-center mb-2" role="alert">
+                        <i class="bi bi-file-text me-2"></i>
+                        <div>
+                            <strong>{{ pending_claims }}</strong> claim{{ pending_claims|pluralize }} awaiting review
+                            <div><a href="{% url 'claims_list' %}?status=submitted" class="alert-link">Review claims</a></div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if low_stock_medicines > 0 %}
+                    <div class="alert alert-danger d-flex align-items-center mb-2" role="alert">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <div>
+                            <strong>{{ low_stock_medicines }}</strong> medicine{{ low_stock_medicines|pluralize }} running low
+                            <div><a href="#" class="alert-link">View inventory</a></div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if expired_medicines > 0 %}
+                    <div class="alert alert-danger d-flex align-items-center mb-2" role="alert">
+                        <i class="bi bi-calendar-x me-2"></i>
+                        <div>
+                            <strong>{{ expired_medicines }}</strong> expired medicine{{ expired_medicines|pluralize }}
+                            <div><a href="#" class="alert-link">Check expiry dates</a></div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if pending_members == 0 and pending_claims == 0 and low_stock_medicines == 0 and expired_medicines == 0 %}
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-check-circle display-4 d-block mb-2 text-success opacity-50"></i>
+                        <p class="mb-0">All systems running smoothly!</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row g-3 mt-4">
+        <div class="col-md-3">
+            <a href="{% url 'members_list' %}?status=pending" class="btn btn-outline-primary w-100">
+                <i class="bi bi-person-check me-2"></i>Approve Members
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'claims_list' %}?status=submitted" class="btn btn-outline-success w-100">
+                <i class="bi bi-file-check me-2"></i>Review Claims
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'reports_dashboard' %}" class="btn btn-outline-info w-100">
+                <i class="bi bi-graph-up me-2"></i>View Reports
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'system_settings' %}" class="btn btn-outline-secondary w-100">
+                <i class="bi bi-gear me-2"></i>System Settings
+            </a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Chart.js configurations
+    Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    Chart.defaults.color = '#6c757d';
+
+    // Monthly Contributions Chart
+    const contributionsCtx = document.getElementById('contributionsChart').getContext('2d');
+    const contributionsChart = new Chart(contributionsCtx, {
+        type: 'bar',
+        data: {
+            labels: [
+                {% for contrib in monthly_contributions %}
+                    '{{ contrib.month|date:"M Y" }}'{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Contributions (KSh)',
+                data: [
+                    {% for contrib in monthly_contributions %}
+                        {{ contrib.total|default:0 }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                borderColor: 'rgba(13, 110, 253, 1)',
+                borderWidth: 2,
+                borderRadius: 6,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: 'white',
+                    bodyColor: 'white',
+                    borderColor: 'rgba(13, 110, 253, 1)',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function(context) {
+                            return 'KSh ' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return 'KSh ' + value.toLocaleString();
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+
+    // Daily Visits Chart
+    const visitsCtx = document.getElementById('visitsChart').getContext('2d');
+    const visitsChart = new Chart(visitsCtx, {
+        type: 'line',
+        data: {
+            labels: [
+                {% for visit in daily_visits %}
+                    '{{ visit.date|date:"M d" }}'{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Daily Visits',
+                data: [
+                    {% for visit in daily_visits %}
+                        {{ visit.count }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: 'rgba(25, 135, 84, 1)',
+                backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: 'rgba(25, 135, 84, 1)',
+                pointBorderColor: 'white',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: 'white',
+                    bodyColor: 'white',
+                    borderColor: 'rgba(25, 135, 84, 1)',
+                    borderWidth: 1,
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+
+    // Update timestamp
+    function updateTimestamp() {
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+    }
+
+    // Chart animation on load
+    setTimeout(() => {
+        contributionsChart.update('active');
+        visitsChart.update('active');
+    }, 500);
+</script>
+{% endblock %}
